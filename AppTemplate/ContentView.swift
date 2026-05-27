@@ -8,17 +8,27 @@
 import SwiftUI
 
 struct ContentView: View {
+    
+    @Environment(DependencyContainer.self) var dependencyContainer:DependencyContainer
+    
     var body: some View {
         VStack {
-            Image(systemName: "globe")
-                .imageScale(.large)
-                .foregroundStyle(.tint)
-            Text("Hello, world!")
+            if dependencyContainer.userSession.isUserLogged {
+                    Button {
+                        Task {
+                            await dependencyContainer.userSession.clearTokens()
+                        }
+                    } label: {
+                        Text("Log out")
+                    }
+                }else {
+                    LoginView()
+                }
         }
         .padding()
     }
 }
 
 #Preview {
-    ContentView()
+    ContentView().environment(DependencyContainer.mockDependencyContainer)
 }
