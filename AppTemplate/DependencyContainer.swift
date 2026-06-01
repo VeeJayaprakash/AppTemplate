@@ -17,6 +17,10 @@ final class DependencyContainer {
     var userSession: UserSession
     let apiClient: APIClient
 
+    // MARK: - API Services
+
+    let loginAPIService: LoginAPIServiceProtocol
+
     // MARK: - Initialization
 
     init() {
@@ -32,6 +36,9 @@ final class DependencyContainer {
             networkClient: networkClient,
             tokenProvider: userSession
         )
+
+        // Initialize API Services
+        self.loginAPIService = LoginAPIService(networkClient: networkClient)
     }
     
 #if DEBUG

@@ -17,9 +17,9 @@ class UserSession: TokenProvider  {
 
     // Track ongoing refresh to prevent duplicates
     private var ongoingRefreshTask: Task<Void, Error>?
-    
-    
-    private(set) var isUserLogged:Bool = false
+
+    var currentUser: User?
+    private(set) var isUserLogged: Bool = false
 
     init(networkClient: NetworkClientProtocol) {
         self.networkClient = networkClient
@@ -72,12 +72,20 @@ class UserSession: TokenProvider  {
     func clearTokens() async {
         accessToken = nil
         refreshToken = nil
+        currentUser = nil
+        isUserLogged = false
         ongoingRefreshTask?.cancel()
         ongoingRefreshTask = nil
-        isUserLogged = false
     }
 
     // MARK: - Token Management
+
+    func setUserSession(user: User, accessToken: String, refreshToken: String) {
+        self.currentUser = user
+        self.accessToken = accessToken
+        self.refreshToken = refreshToken
+        self.isUserLogged = true
+    }
 
     func setTokens(accessToken: String, refreshToken: String) {
         self.accessToken = accessToken

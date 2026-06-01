@@ -9,19 +9,21 @@ import SwiftUI
 
 struct LoginView: View {
     enum Fields: Hashable { case email, password }
-    
-    @Environment(DependencyContainer.self) var dependencyContainer
+
+    @State private var viewModel: LoginViewModel
     @FocusState private var focusField: Fields?
-    @State private var email:String = ""
-    @State private var password:String = ""
-    
+
+    init(viewModel: LoginViewModel) {
+        _viewModel = State(initialValue: viewModel)
+    }
+
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
             Text("Sign in")
                 .font(.largeTitle.bold())
                 .padding(.bottom, 10)
             
-            TextField("Email", text: $email)
+            TextField("Email", text: $viewModel.email)
                 .padding()
                 .background(Color.gray.opacity(0.3))
                 .cornerRadius(10)
@@ -32,8 +34,8 @@ struct LoginView: View {
                 .autocorrectionDisabled(true)
                 .submitLabel(.next)
                 .focused($focusField, equals: .email)
-            
-            SecureField("Password", text: $password)
+
+            SecureField("Password", text: $viewModel.password)
                 .padding()
                 .background(Color.gray.opacity(0.3))
                 .cornerRadius(10)
@@ -41,19 +43,37 @@ struct LoginView: View {
                 .textContentType(.password)
                 .submitLabel(.done)
                 .focused($focusField, equals: .password)
-            
+
+            if let errorMessage = viewModel.errorMessage {
+                Text(errorMessage)
+                    .foregroundStyle(.red)
+                    .font(.caption)
+            }
+
             Button {
                 focusField = nil
-                // dependencyContainer.userSession.loginUser()
+                Task {
+                    await viewModel.login()
+                }
             } label: {
-                Text("Login")
-                    .padding()
-                    .font(.headline)
-                    .frame(maxWidth: .infinity)
-                    .background(Color.blue)
-                    .foregroundStyle(.white)
-                    .cornerRadius(10)
+                if viewModel.isLoading {
+                    ProgressView()
+                        .tint(.white)
+                        .padding()
+                        .frame(maxWidth: .infinity)
+                        .background(Color.blue)
+                        .cornerRadius(10)
+                } else {
+                    Text("Login")
+                        .padding()
+                        .font(.headline)
+                        .frame(maxWidth: .infinity)
+                        .background(Color.blue)
+                        .foregroundStyle(.white)
+                        .cornerRadius(10)
+                }
             }
+            .disabled(viewModel.isLoading)
             .padding(.top, 8)
             Spacer()
         }
@@ -65,10 +85,16 @@ struct LoginView: View {
             case .none: break
             }
         }
-        .onAppear { focusField = .email }
+        .onAppear {
+            focusField = .email
+        }
     }
 }
 
 #Preview {
-    LoginView().environment(DependencyContainer.mockDependencyContainer)
+    let dependencies = DependencyContainer.mockDependencyContainer
+    let factory = ViewFactory(dependencies: dependencies)
+    return factory.makeLoginView()
+        .environment(dependencies)
+        .environment(factory)
 }

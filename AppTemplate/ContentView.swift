@@ -8,27 +8,23 @@
 import SwiftUI
 
 struct ContentView: View {
-    
-    @Environment(DependencyContainer.self) var dependencyContainer:DependencyContainer
-    
+
+    @Environment(DependencyContainer.self) var dependencyContainer: DependencyContainer
+    @Environment(ViewFactory.self) var viewFactory: ViewFactory
+
     var body: some View {
-        VStack {
-            if dependencyContainer.userSession.isUserLogged {
-                    Button {
-                        Task {
-                            await dependencyContainer.userSession.clearTokens()
-                        }
-                    } label: {
-                        Text("Log out")
-                    }
-                }else {
-                    LoginView()
-                }
+        if dependencyContainer.userSession.isUserLogged {
+            viewFactory.makeMainTabView()
+        } else {
+            viewFactory.makeLoginView()
         }
-        .padding()
     }
 }
 
 #Preview {
-    ContentView().environment(DependencyContainer.mockDependencyContainer)
+    let dependencies = DependencyContainer.mockDependencyContainer
+    let factory = ViewFactory(dependencies: dependencies)
+    return ContentView()
+        .environment(dependencies)
+        .environment(factory)
 }
