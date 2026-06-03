@@ -27,11 +27,6 @@ struct LoginResponse: Codable {
 // MARK: - Endpoint
 
 struct LoginEndpoint: Endpoint {
-    var baseURL: String {
-        // TODO: Replace with your API base URL
-        return "https://dummyjson.com"
-    }
-
     var path: String {
         return "/auth/login"
     }

@@ -135,7 +135,13 @@ AppTemplate/
 ├── DependencyContainer.swift      # Infrastructure dependencies
 ├── ViewFactory.swift              # View/ViewModel factory
 │
-├── Networking/
+├── Config/
+│   └── AppConfig.swift           # Environment configuration
+│
+├── Storage/
+│   └── KeychainManager.swift     # Secure keychain storage
+│
+├── Network/
 │   ├── Core/
 │   │   ├── NetworkClient.swift   # Base HTTP client
 │   │   ├── APIClient.swift       # Authenticated wrapper
@@ -159,7 +165,10 @@ AppTemplate/
     │   └── SettingsViewModel.swift
     │
     ├── Home/
-    │   └── HomeView.swift        # Home screen
+    │   ├── HomeView.swift        # Home screen
+    │   ├── HomeViewModel.swift   # Home logic & state
+    │   ├── HomeAPIService.swift  # Home API calls
+    │   └── Product.swift         # Product models
     │
     └── MainTabView.swift         # Tab navigation
 ```
@@ -171,6 +180,47 @@ AppTemplate/
 - **Flat where possible**: Avoid over-nesting directories
 
 ## Core Components
+
+### App Configuration
+
+Centralized configuration system for managing environment-specific settings (`Config/AppConfig.swift`):
+
+- Single source of truth for all environment configurations
+- Four environments: development, demo, qa, production
+- Protocol extension provides default baseURL to all endpoints
+
+**Configuration:**
+```swift
+struct AppConfig {
+    static let current: Environment = .production
+
+    static var baseURL: String {
+        switch current {
+        case .development: return "https://dummyjson.com"
+        case .demo: return "https://dummyjson.com"
+        case .qa: return "https://dummyjson.com"
+        case .production: return "https://dummyjson.com"
+        }
+    }
+}
+```
+
+**Usage:**
+Endpoints automatically inherit baseURL via protocol extension - no need to specify it in each endpoint:
+
+```swift
+struct ProductsEndpoint: Endpoint {
+    var path: String { "/products" }
+    var method: HTTPMethod { .get }
+    // baseURL comes from protocol extension
+}
+```
+
+**Switching Environments:**
+Simply change `AppConfig.current` to switch between environments:
+```swift
+static let current: Environment = .development  // Change this
+```
 
 ### Networking Layer
 
@@ -231,6 +281,41 @@ struct LoginEndpoint: Endpoint {
 }
 ```
 
+### Secure Storage
+
+#### KeychainManager
+
+Secure storage implementation using iOS Keychain Services (`Storage/KeychainManager.swift`):
+
+- Protocol-based design for easy testing and mocking
+- Type-safe storage with Codable support
+- Secure token and credential persistence
+- Automatic session restoration on app launch
+
+**Protocol:**
+```swift
+protocol KeychainManagerProtocol {
+    func save<T: Codable>(_ item: T, forKey key: String) throws
+    func retrieve<T: Codable>(forKey key: String, as type: T.Type) throws -> T?
+    func delete(forKey key: String) throws
+    func deleteAll() throws
+}
+```
+
+**What's Stored:**
+- Access tokens (encrypted in keychain)
+- Refresh tokens (encrypted in keychain)
+- User data (as JSON in keychain)
+
+**Access Control:**
+- Uses `kSecAttrAccessibleAfterFirstUnlock` for balance of security and usability
+- Data persists across app launches
+- Cleared on logout
+- Isolated by app bundle identifier
+
+**Testing:**
+A `MockKeychainManager` is included for unit tests that mimics keychain behavior using in-memory storage.
+
 ### User Session Management
 
 #### UserSession
@@ -238,10 +323,11 @@ struct LoginEndpoint: Endpoint {
 Central authentication state manager (`User/UserSession.swift`):
 
 - Implements `TokenProvider` protocol
-- Manages access and refresh tokens
+- Manages access and refresh tokens with keychain persistence
 - Tracks current user
 - Handles token refresh logic
 - Observable for UI updates
+- Automatic session restoration on initialization
 
 **Key Properties:**
 ```swift
@@ -252,11 +338,17 @@ var isAuthenticated: Bool        // Has valid tokens
 
 **Key Methods:**
 ```swift
-func setUserSession(user:accessToken:refreshToken:)  // Login
-func clearTokens()                                    // Logout
+func setUserSession(user:accessToken:refreshToken:)  // Login & persist
+func clearTokens()                                    // Logout & clear keychain
 func getAccessToken() async throws -> String          // Get current token
 func refreshToken() async throws                      // Refresh expired token
 ```
+
+**Session Persistence:**
+- On login: Tokens and user data saved to keychain
+- On app launch: Attempts to restore session from keychain
+- On logout: All data cleared from keychain
+- On token refresh: Updated tokens automatically persisted
 
 ### Authentication Flow
 
@@ -347,17 +439,24 @@ open AppTemplate.xcodeproj
 
 #### API Endpoints
 
-Update the base URL in your endpoint definitions:
+Update the base URL in `Config/AppConfig.swift`:
 
 ```swift
-// In LoginViewModel.swift (or create a Config.swift)
-struct LoginEndpoint: Endpoint {
-    var baseURL: String {
-        return "https://your-api.example.com"  // Update this
+static var baseURL: String {
+    switch current {
+    case .development:
+        return "https://dev-api.example.com"  // Update URLs here
+    case .demo:
+        return "https://demo-api.example.com"
+    case .qa:
+        return "https://qa-api.example.com"
+    case .production:
+        return "https://api.example.com"
     }
-    // ...
 }
 ```
+
+All endpoints automatically use the configured base URL via protocol extension.
 
 #### Token Refresh
 

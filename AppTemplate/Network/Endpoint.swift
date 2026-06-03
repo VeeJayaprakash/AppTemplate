@@ -16,6 +16,9 @@ protocol Endpoint {
 }
 
 extension Endpoint {
+    // Default base URL from AppConfig
+    var baseURL: String { AppConfig.baseURL }
+
     var headers: [String: String]? { nil }
     var queryParameters: [String: String]? { nil }
 

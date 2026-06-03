@@ -14,6 +14,7 @@ class UserSession: TokenProvider  {
     private var refreshToken: String?
 
     private let networkClient: NetworkClientProtocol
+    private let keychainManager: KeychainManagerProtocol
 
     // Track ongoing refresh to prevent duplicates
     private var ongoingRefreshTask: Task<Void, Error>?
@@ -21,8 +22,20 @@ class UserSession: TokenProvider  {
     var currentUser: User?
     private(set) var isUserLogged: Bool = false
 
-    init(networkClient: NetworkClientProtocol) {
+    // MARK: - Keychain Keys
+
+    private enum KeychainKey {
+        static let accessToken = "accessToken"
+        static let refreshToken = "refreshToken"
+        static let currentUser = "currentUser"
+    }
+
+    init(networkClient: NetworkClientProtocol, keychainManager: KeychainManagerProtocol) {
         self.networkClient = networkClient
+        self.keychainManager = keychainManager
+
+        // Attempt to restore session from keychain
+        loadPersistedSession()
     }
 
     // MARK: - TokenProvider Protocol
@@ -76,6 +89,9 @@ class UserSession: TokenProvider  {
         isUserLogged = false
         ongoingRefreshTask?.cancel()
         ongoingRefreshTask = nil
+
+        // Clear from keychain
+        try? keychainManager.deleteAll()
     }
 
     // MARK: - Token Management
@@ -85,16 +101,79 @@ class UserSession: TokenProvider  {
         self.accessToken = accessToken
         self.refreshToken = refreshToken
         self.isUserLogged = true
+
+        // Persist to keychain
+        persistSession()
     }
 
     func setTokens(accessToken: String, refreshToken: String) {
         self.accessToken = accessToken
         self.refreshToken = refreshToken
         isUserLogged = true
+
+        // Persist to keychain
+        persistTokens()
     }
 
     private func updateTokens(accessToken: String, refreshToken: String) {
         self.accessToken = accessToken
         self.refreshToken = refreshToken
+
+        // Persist updated tokens to keychain
+        persistTokens()
+    }
+
+    // MARK: - Keychain Persistence
+
+    private func loadPersistedSession() {
+        do {
+            // Try to load tokens and user from keychain
+            let accessToken = try keychainManager.retrieve(
+                forKey: KeychainKey.accessToken,
+                as: String.self
+            )
+            let refreshToken = try keychainManager.retrieve(
+                forKey: KeychainKey.refreshToken,
+                as: String.self
+            )
+            let user = try keychainManager.retrieve(
+                forKey: KeychainKey.currentUser,
+                as: User.self
+            )
+
+            // If all data is present, restore session
+            if let accessToken, let refreshToken, let user {
+                self.accessToken = accessToken
+                self.refreshToken = refreshToken
+                self.currentUser = user
+                self.isUserLogged = true
+            }
+        } catch {
+            // Session not found or corrupted, start fresh
+            // Silent failure - this is expected for new installs or after logout
+        }
+    }
+
+    private func persistSession() {
+        do {
+            try keychainManager.save(accessToken, forKey: KeychainKey.accessToken)
+            try keychainManager.save(refreshToken, forKey: KeychainKey.refreshToken)
+            if let currentUser {
+                try keychainManager.save(currentUser, forKey: KeychainKey.currentUser)
+            }
+        } catch {
+            // Log error in production - for now, silent failure
+            print("Failed to persist session to keychain: \(error)")
+        }
+    }
+
+    private func persistTokens() {
+        do {
+            try keychainManager.save(accessToken, forKey: KeychainKey.accessToken)
+            try keychainManager.save(refreshToken, forKey: KeychainKey.refreshToken)
+        } catch {
+            // Log error in production - for now, silent failure
+            print("Failed to persist tokens to keychain: \(error)")
+        }
     }
 }

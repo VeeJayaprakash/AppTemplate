@@ -26,10 +26,22 @@ final class ViewFactory {
         return LoginView(viewModel: viewModel)
     }
 
+    // MARK: - Home Feature
+
+    func makeHomeView() -> HomeView {
+        let viewModel = HomeViewModel(
+            homeAPIService: dependencies.homeAPIService
+        )
+        return HomeView(viewModel: viewModel)
+    }
+
     // MARK: - Settings Feature
 
     func makeSettingsView() -> SettingsView {
-        return SettingsView()
+        let viewModel = SettingsViewModel(
+            settingsAPIService: dependencies.settingsAPIService
+        )
+        return SettingsView(viewModel: viewModel)
     }
 
     // MARK: - Main Tab View

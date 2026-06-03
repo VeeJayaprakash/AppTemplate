@@ -8,16 +8,17 @@
 import SwiftUI
 
 struct MainTabView: View {
+    @Environment(ViewFactory.self) private var viewFactory
+
     var body: some View {
         TabView {
             Tab("Home", systemImage: "house.fill") {
-                HomeView()
+                viewFactory.makeHomeView()
             }
-            
+
             Tab("Settings", systemImage: "gear") {
                 SettingsView()
             }
-
         }
     }
 }
