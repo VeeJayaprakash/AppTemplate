@@ -34,7 +34,7 @@ struct SettingsView: View {
                         Spacer()
                         if viewModel.isLoadingProfile {
                             ProgressView()
-                        } else if let error = viewModel.profileError {
+                        } else if viewModel.profileError != nil {
                             Image(systemName: "exclamationmark.triangle.fill")
                                 .foregroundStyle(.red)
                         } else if viewModel.fetchedUser != nil {

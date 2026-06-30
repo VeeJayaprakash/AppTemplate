@@ -9,7 +9,7 @@ import Foundation
 
 // MARK: - Environment
 
-enum Environment {
+enum DeploymentEnv {
     case development
     case demo
     case qa
@@ -21,7 +21,7 @@ enum Environment {
 struct AppConfig {
     /// Current active environment
     /// Change this to switch between environments
-    static let current: Environment = .production
+    static let current: DeploymentEnv = .production
 
     /// Base URL for API endpoints
     static var baseURL: String {

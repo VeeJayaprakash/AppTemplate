@@ -84,8 +84,8 @@ final class LoginViewModel {
 
             // Success - view will automatically update
 
-        } catch NetworkError.httpError(let statusCode, _) where statusCode == 401 {
-            errorMessage = "Invalid email or password"
+        } catch NetworkError.httpError(let statusCode, _) where statusCode == 400 {
+            errorMessage = "Invalid user id or password"
         } catch NetworkError.networkError {
             errorMessage = "Network error. Please check your connection."
         } catch {

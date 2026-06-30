@@ -35,6 +35,6 @@ final class SettingsAPIService: SettingsAPIServiceProtocol {
     func fetchUserProfile() async throws -> User {
         let endpoint = UserProfileEndpoint()
         // Reuses existing User model - extra fields in API response are ignored
-        return try await apiClient.authenticatedRequest(endpoint: endpoint)
+        return try await apiClient.request(endpoint: endpoint)
     }
 }

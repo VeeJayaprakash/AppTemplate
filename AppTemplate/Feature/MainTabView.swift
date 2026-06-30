@@ -17,7 +17,7 @@ struct MainTabView: View {
             }
 
             Tab("Settings", systemImage: "gear") {
-                SettingsView()
+                viewFactory.makeSettingsView()
             }
         }
     }
